@@ -6,7 +6,7 @@ import numpy as np
 import math
 from numpy import linalg as LA
 import threading, Queue
-import operator
+import operator, sys
 import matplotlib.pyplot as plt
 
 def find_diffs_fast(data1, data2):
@@ -94,13 +94,9 @@ def main():
     """
     Given two directories, find and compare all matching h5 files, returning sorted list of L2 norms.
     """
-    file1 = "2dtestcases_udec13.h5"
-    file2 = "2dtestcases_ujun14_row.h5"
-
-    dir_old = '/nfs/home/aspontarelli/S-RELAP5/runCOA/results.tmp/udec13'
-    dir_new = '/nfs/home/aspontarelli/S-RELAP5/runCOA/results.tmp/uaug13'
-    dir_old = '/nfs/home/aspontarelli/S-RELAP5/runCOA/results.tmp/udec13/cctf/pwrlbrv2'
-    dir_new = '/nfs/home/aspontarelli/S-RELAP5/runCOA/results.tmp/uaug13/cctf/pwrlbrv2'
+    dir_old = sys.argv[1]
+    dir_new = sys.argv[2]
+    print dir_old, dir_new
 
     results = diff_all_cases(dir_old, dir_new)
     for case, error in sorted(results.iteritems(), key=operator.itemgetter(1)):
@@ -111,6 +107,5 @@ def main():
 
 if __name__ == '__main__':
     import cProfile
-    # cProfile.run('main()',sort='tottime')
     # cProfile.run('main()',sort='cumtime')
     main()
