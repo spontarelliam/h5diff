@@ -1,11 +1,12 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import tables as tb
 import shutil, os, fnmatch
 from subprocess import Popen, PIPE, call
 import numpy as np
 import math
 from numpy import linalg as LA
-import threading, Queue
+# import threading, Queue
 import operator, sys
 import matplotlib.pyplot as plt
 
@@ -16,7 +17,7 @@ def find_diffs_fast(data1, data2):
     # index = [i for i, col in enumerate(columns) if col !=0]
     for col in columns:
         if col != 0:
-            print r_squared(data1[:,col], data2[:,col])
+            print(r_squared(data1[:,col], data2[:,col]))
     # return index
 
 def squared_row_norms(X):
@@ -74,8 +75,8 @@ def diff_all_cases(oldDir, newDir):
         data1 = get_data(paths[0])
         data2 = get_data(paths[1])
 
-        print relative_error(data1, data2)
-        print squared_euclidean_distances(data1, data2)
+        # print relative_error(data1, data2)
+        # print squared_euclidean_distances(data1, data2)
 
         results[filename.split('.')[0]] = round(relative_error(data1, data2), 4)
     return results
@@ -84,7 +85,7 @@ def plot(results):
     """
     plot the results in a sorted bar chart.
     """
-    print results[1,0]
+    print(results[1,0])
     index = np.arange(len(results))
     plt.bar(index,results,0.3)
     plt.xticks(index, results[0])
@@ -96,11 +97,11 @@ def main():
     """
     dir_old = sys.argv[1]
     dir_new = sys.argv[2]
-    print dir_old, dir_new
+    print(dir_old, dir_new)
 
     results = diff_all_cases(dir_old, dir_new)
-    for case, error in sorted(results.iteritems(), key=operator.itemgetter(1)):
-        print error, case
+    for case, error in sorted(results.items(), key=operator.itemgetter(1)):
+        print(error, case)
 
     # plot(sorted(results.iteritems(), key=operator.itemgetter(1), reverse=True)[:10])
 
