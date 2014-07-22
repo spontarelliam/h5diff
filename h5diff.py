@@ -4,41 +4,17 @@ import tables as tb
 import shutil, os, fnmatch
 from subprocess import Popen, PIPE, call
 import numpy as np
-import math
 from numpy import linalg as LA
-# import threading, Queue
-import operator, sys
 import matplotlib.pyplot as plt
+import sys
 
-def find_diffs_fast(data1, data2):
-    """Return list of nonmatching column numbers"""
-    diff = data1[:,:] - data2[:,:]
-    columns = (diff != 0).sum(0)
-    # index = [i for i, col in enumerate(columns) if col !=0]
-    for col in columns:
-        if col != 0:
-            print(r_squared(data1[:,col], data2[:,col]))
-    # return index
-
-def squared_row_norms(X):
-    # From http://stackoverflow.com/q/19094441/166749
-    return np.einsum('ij,ij->i', X, X)
-
-def squared_euclidean_distances(data, vec):
-    data2 = squared_row_norms(data)
-    vec2 = squared_row_norms(vec)
-    d = np.dot(data, vec2).ravel()
-    # d *= -2
-    # d += data2
-    # d += vec2
-    return d
 
 def relative_error(data1, data2):
     """
-    Calculate relative error using L1 norm of matrices
+    Calculate relative error using Frobenius norm
     """
     diff = data1 - data2
-    return LA.norm(diff, ord=1) / LA.norm(data1, ord=1)
+    return LA.norm(diff) / LA.norm(data1)
 
 def get_data(filename):
     """
@@ -53,7 +29,7 @@ def get_data(filename):
 def find_h5_files(dir_old, dir_new):
     """
     Find matching h5 files from two directories. Return dictionary of the form,
-    {casename: (path_old, path_new)}
+    {filename: (path_old, path_new)}
     """
     matches = {}
     for root, dirs, filenames in os.walk(dir_old):
@@ -64,9 +40,9 @@ def find_h5_files(dir_old, dir_new):
                 matches[filename] = (path_old, path_new)
     return matches
 
-def diff_all_cases(oldDir, newDir):
+def diff_all_files(oldDir, newDir):
     """
-    Calculate a mean std dev for every case in the target directory.
+    Calculate a mean std dev for every h5 file in the target directory.
     Return a list of sorted results.
     """
     results = {}
@@ -74,39 +50,42 @@ def diff_all_cases(oldDir, newDir):
     for filename, paths in h5_files.items():
         data1 = get_data(paths[0])
         data2 = get_data(paths[1])
-
-        # print relative_error(data1, data2)
-        # print squared_euclidean_distances(data1, data2)
-
-        results[filename.split('.')[0]] = round(relative_error(data1, data2), 4)
+        results[filename.split('.')[0]] = round(relative_error(data1, data2), 3)
     return results
 
 def plot(results):
     """
     plot the results in a sorted bar chart.
     """
-    print(results[1,0])
+    values = [value for value, file in results]
+    files = [file for value, file in results]
     index = np.arange(len(results))
-    plt.bar(index,results,0.3)
-    plt.xticks(index, results[0])
+    plt.bar(index,values,0.3)
+    plt.xticks(index, files)
+
+    plt.title('Relative Error Between Matching H5 Files')
+    plt.xlabel('File Name')
+    plt.ylabel('Relative Error')
     plt.show()
 
 def main():
     """
-    Given two directories, find and compare all matching h5 files, returning sorted list of L2 norms.
+    Given two directories, find and compare all matching h5 files, returning sorted
+    list of normalized differences calculted with Frobenius norm.
     """
     dir_old = sys.argv[1]
     dir_new = sys.argv[2]
     print(dir_old, dir_new)
 
-    results = diff_all_cases(dir_old, dir_new)
-    for case, error in sorted(results.items(), key=operator.itemgetter(1)):
-        print(error, case)
+    results = diff_all_files(dir_old, dir_new)
 
-    # plot(sorted(results.iteritems(), key=operator.itemgetter(1), reverse=True)[:10])
+    # present results
+    for error, file in sorted(zip(results.values(), results.keys())):
+        print(error, file)
+    plot(sorted(zip(results.values(), results.keys()), reverse=True)[:10])
 
 
 if __name__ == '__main__':
-    import cProfile
+    # import cProfile
     # cProfile.run('main()',sort='cumtime')
     main()
