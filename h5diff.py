@@ -6,7 +6,9 @@ from subprocess import Popen, PIPE, call
 import numpy as np
 from numpy import linalg as LA
 import matplotlib.pyplot as plt
+import operator
 import sys
+import pandas as pd
 
 
 def relative_error(data1, data2):
@@ -16,13 +18,13 @@ def relative_error(data1, data2):
     diff = data1 - data2
     return LA.norm(diff) / LA.norm(data1)
 
-def get_data(filename):
+def get_data(filename, node):
     """
     Accepts filename and returns respective data arrays
     """
     pytfile = tb.File(filename)
     group = str(pytfile.listNodes('/')[0]).split()[0]
-    data = pytfile.getNode(group, 'Transient_Data')[:,:]
+    data = pd.DataFrame(pytfile.getNode(group, node)[:,:])
     pytfile.close() 
     return data
 
@@ -40,7 +42,7 @@ def find_h5_files(dir_old, dir_new):
                 matches[filename] = (path_old, path_new)
     return matches
 
-def diff_all_files(oldDir, newDir):
+def diff_all_files(oldDir, newDir, node):
     """
     Calculate a mean std dev for every h5 file in the target directory.
     Return a list of sorted results.
@@ -48,8 +50,8 @@ def diff_all_files(oldDir, newDir):
     results = {}
     h5_files = find_h5_files(oldDir, newDir)
     for filename, paths in h5_files.items():
-        data1 = get_data(paths[0])
-        data2 = get_data(paths[1])
+        data1 = get_data(paths[0], node)
+        data2 = get_data(paths[1], node)
         results[filename.split('.')[0]] = round(relative_error(data1, data2), 3)
     return results
 
@@ -66,7 +68,7 @@ def plot(results):
     plt.title('Relative Error Between Matching H5 Files')
     plt.xlabel('File Name')
     plt.ylabel('Relative Error')
-    plt.show()
+    # plt.show()
 
 def main():
     """
@@ -75,11 +77,10 @@ def main():
     """
     dir_old = sys.argv[1]
     dir_new = sys.argv[2]
-    print(dir_old, dir_new)
+    node = sys.argv[3]
 
-    results = diff_all_files(dir_old, dir_new)
+    results = diff_all_files(dir_old, dir_new, node)
 
-    # present results
     for error, file in sorted(zip(results.values(), results.keys())):
         print(error, file)
     plot(sorted(zip(results.values(), results.keys()), reverse=True)[:10])
