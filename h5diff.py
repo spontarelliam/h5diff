@@ -9,16 +9,17 @@ import matplotlib.pyplot as plt
 import operator
 import sys
 import pandas as pd
+import multiprocessing
 
-
-def relative_error(paths, node):
+def relative_error(paths, node, queue):
     """
     Calculate relative error using Frobenius norm
     """
     data1 = get_data(paths[0], node)
     data2 = get_data(paths[1], node)
     diff = (data1 - data2).fillna(0)
-    return LA.norm(diff) / LA.norm(data1)
+    queue.put(LA.norm(diff) / LA.norm(data1))
+    return
 
 def get_data(filename, node):
     """
@@ -50,9 +51,14 @@ def diff_all_files(h5_files, node):
     Return a list of sorted results.
     """
     results = {}
+    result_queue = multiprocessing.Queue()
     for filename, paths in h5_files.items():
-        results[filename.split('.')[0]] = round(relative_error(paths, node), 3)
-    return results
+        job = multiprocessing.Process(target=relative_error,
+                                      args=(paths, node, result_queue))
+        job.start()
+        results[filename.split('.')[0]] = round(result_queue.get(), 3)
+        job.join()
+    return results 
 
 def plot(results):
     """
@@ -97,5 +103,5 @@ def main():
 
 if __name__ == '__main__':
     import cProfile
-    cProfile.run('main()',sort='cumtime')
-    # main()
+    # cProfile.run('main()',sort='cumtime')
+    main()
