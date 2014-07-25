@@ -11,11 +11,13 @@ import sys
 import pandas as pd
 
 
-def relative_error(data1, data2):
+def relative_error(paths, node):
     """
     Calculate relative error using Frobenius norm
     """
-    diff = data1 - data2
+    data1 = get_data(paths[0], node)
+    data2 = get_data(paths[1], node)
+    diff = (data1 - data2).fillna(0)
     return LA.norm(diff) / LA.norm(data1)
 
 def get_data(filename, node):
@@ -42,17 +44,14 @@ def find_h5_files(dir_old, dir_new):
                 matches[filename] = (path_old, path_new)
     return matches
 
-def diff_all_files(oldDir, newDir, node):
+def diff_all_files(h5_files, node):
     """
-    Calculate a mean std dev for every h5 file in the target directory.
+    Calculate a relative error for every h5 file in the target directory.
     Return a list of sorted results.
     """
     results = {}
-    h5_files = find_h5_files(oldDir, newDir)
     for filename, paths in h5_files.items():
-        data1 = get_data(paths[0], node)
-        data2 = get_data(paths[1], node)
-        results[filename.split('.')[0]] = round(relative_error(data1, data2), 3)
+        results[filename.split('.')[0]] = round(relative_error(paths, node), 3)
     return results
 
 def plot(results):
@@ -62,12 +61,21 @@ def plot(results):
     values = [value for value, file in results]
     files = [file for value, file in results]
     index = np.arange(len(results))
-    plt.bar(index,values,0.3)
-    plt.xticks(index, files)
 
-    plt.title('Relative Error Between Matching H5 Files')
-    plt.xlabel('File Name')
-    plt.ylabel('Relative Error')
+    fig, ax = plt.subplots(1,1)
+    plt.subplots_adjust(bottom=0.4)
+
+    ax.bar(index, values)
+
+    # Axes and labels
+    ax.set_title('Relative Error Between Matching H5 Files')
+    ax.set_xlabel('File Name')
+    ax.set_ylabel('Relative Error')
+    # ax.set_xlim(0,20)
+    ax.set_xticks(index, files)
+    ax.set_xticklabels(files, rotation=80, fontsize=10)
+
+    plt.savefig('h5diff.png')
     # plt.show()
 
 def main():
@@ -79,7 +87,8 @@ def main():
     dir_new = sys.argv[2]
     node = sys.argv[3]
 
-    results = diff_all_files(dir_old, dir_new, node)
+    h5_files = find_h5_files(dir_old, dir_new)
+    results = diff_all_files(h5_files, node)
 
     for error, file in sorted(zip(results.values(), results.keys())):
         print(error, file)
@@ -87,6 +96,6 @@ def main():
 
 
 if __name__ == '__main__':
-    # import cProfile
-    # cProfile.run('main()',sort='cumtime')
-    main()
+    import cProfile
+    cProfile.run('main()',sort='cumtime')
+    # main()
