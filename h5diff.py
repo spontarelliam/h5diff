@@ -11,14 +11,14 @@ import sys
 import pandas as pd
 import multiprocessing
 
-def relative_error(paths, node, queue):
+def relative_error(paths, node, filename, queue):
     """
     Calculate relative error using Frobenius norm
     """
     data1 = get_data(paths[0], node)
     data2 = get_data(paths[1], node)
     diff = (data1 - data2).fillna(0)
-    queue.put(LA.norm(diff) / LA.norm(data1))
+    queue.put((filename, LA.norm(diff) / LA.norm(data1)))
     return
 
 def get_data(filename, node):
@@ -51,13 +51,17 @@ def diff_all_files(h5_files, node):
     Return a list of sorted results.
     """
     results = {}
+    proc_list = list()
     result_queue = multiprocessing.Queue()
     for filename, paths in h5_files.items():
         job = multiprocessing.Process(target=relative_error,
-                                      args=(paths, node, result_queue))
+                                      args=(paths, node, filename, result_queue))
+        proc_list.append(job)
         job.start()
-        results[filename.split('.')[0]] = round(result_queue.get(), 3)
-        job.join()
+    [p.join() for p in proc_list]
+    while not result_queue.empty():
+        filename, one_proc_data = result_queue.get()
+        results[filename.split('.')[0]] = round(one_proc_data, 3)
     return results 
 
 def plot(results):
