@@ -2,14 +2,12 @@
 from __future__ import print_function
 import tables as tb
 import shutil, os, fnmatch
-from subprocess import Popen, PIPE, call
 import numpy as np
 from numpy import linalg as LA
 import matplotlib.pyplot as plt
-import operator
-import sys
 import pandas as pd
 import multiprocessing
+import argparse
 
 def relative_error(paths, node, filename, queue):
     """
@@ -31,13 +29,15 @@ def get_data(filename, node):
     pytfile.close() 
     return data
 
-def find_h5_files(dir_old, dir_new):
+def find_h5_files(dir_old, dir_new, recursive):
     """
     Find matching h5 files from two directories. Return dictionary of the form,
     {filename: (path_old, path_new)}
     """
     matches = {}
     for root, dirs, filenames in os.walk(dir_old):
+        if root.count(os.sep) >= 1 and not recursive:
+            break
         for filename in fnmatch.filter(filenames, '*.h5'):
             path_old = os.path.join(root, filename)
             path_new = os.path.join(root.replace(dir_old, dir_new), filename)
@@ -85,24 +85,46 @@ def plot(results):
     ax.set_xticks(index, files)
     ax.set_xticklabels(files, rotation=80, fontsize=10)
 
-    plt.savefig('h5diff.png')
-    # plt.show()
+    plt.savefig('h5diff_results.png')
+
 
 def main():
     """
     Given two directories, find and compare all matching h5 files, returning sorted
     list of normalized differences calculted with Frobenius norm.
     """
-    dir_old = sys.argv[1]
-    dir_new = sys.argv[2]
-    node = sys.argv[3]
+    parser = argparse.ArgumentParser()
+    parser.add_argument('files', type=str, nargs='+',
+                        help='two files to be differenced')
+    parser.add_argument('-n', '--node',
+                        help='name of the node or group to be differenced')
+    parser.add_argument('-r', '--recursive',
+                        help='difference all matching .h5 files recursively',
+                        action='store_true')
+    parser.add_argument('-p', '--plot',
+                        help='generate a plot of the results',
+                        action='store_true')
+    args = parser.parse_args()
 
-    h5_files = find_h5_files(dir_old, dir_new)
+    dir_old = args.files[0]
+    dir_new = args.files[1]
+    node = args.node
+
+    if os.path.isfile(dir_old):
+        filename = dir_old.split('/')[-1]
+        h5_files = {filename: (dir_old, dir_new)}
+    if os.path.isdir(dir_old):
+        h5_files = find_h5_files(dir_old, dir_new, args.recursive)
+
+    print('Processing {} pairs of .h5 files.'.format(len(h5_files)))
+    
     results = diff_all_files(h5_files, node)
 
     for error, file in sorted(zip(results.values(), results.keys())):
         print(error, file)
-    plot(sorted(zip(results.values(), results.keys()), reverse=True)[:10])
+
+    if args.plot:
+        plot(sorted(zip(results.values(), results.keys()), reverse=True)[:10])
 
 
 if __name__ == '__main__':
