@@ -16,7 +16,17 @@ def relative_error(paths, node, filename, queue):
     data1 = get_data(paths[0], node)
     data2 = get_data(paths[1], node)
     diff = (data1 - data2).fillna(0)
-    queue.put((filename, LA.norm(diff) / LA.norm(data1)))
+    queue.put((filename, LA.norm(diff) / (LA.norm(data1) + 1E-20)))
+
+    detail = False
+    results = {}
+    if detail:
+        for c in range(data1.iloc[0].count()):
+            col_diff = (data1[c] - data2[c]).fillna(0)
+            results[c] = LA.norm(col_diff) / (LA.norm(data1[c]) + 1E-20)
+
+        for error, file in sorted(zip(results.values(), results.keys())):
+            print(error, file)
     return
 
 def get_data(filename, node):
@@ -104,6 +114,9 @@ def main():
     parser.add_argument('-p', '--plot',
                         help='generate a plot of the results',
                         action='store_true')
+    parser.add_argument('-d', '--detail',
+                        help='generate a detailed report of the largest differences',
+                        action='store_true')
     args = parser.parse_args()
 
     dir_old = args.files[0]
@@ -125,6 +138,9 @@ def main():
 
     if args.plot:
         plot(sorted(zip(results.values(), results.keys()), reverse=True)[:10])
+    if os.path.isfile(dir_old) and args.detail:
+        pass
+        
 
 
 if __name__ == '__main__':
