@@ -85,14 +85,14 @@ def plot(results):
     fig, ax = plt.subplots(1,1)
     plt.subplots_adjust(bottom=0.4)
 
-    ax.bar(index, values)
+    ax.bar(index, values, align='center')
 
     # Axes and labels
     ax.set_title('Relative Error Between Matching H5 Files')
     ax.set_xlabel('File Name')
     ax.set_ylabel('Relative Error')
-    # ax.set_xlim(0,20)
-    ax.set_xticks(index, files)
+    ax.set_xlim(-1,len(results))
+    ax.set_xticks(index)
     ax.set_xticklabels(files, rotation=80, fontsize=10)
 
     plt.savefig('h5diff_results.png')
